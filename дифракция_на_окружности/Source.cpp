@@ -10,7 +10,7 @@ double R = 5.0;
 double K0 = 1;
 //double K = K0 * 1.2;
 //double K0 = 1;
-double K = K0*1.5;
+double K = K0 * 1.5;
 
 
 double f(double x) {
@@ -29,7 +29,7 @@ double Ker(double x, double s) {
     return x * s + x * x;
 }
 
-complex <double> Kernel(double k, double rho_1, double rho_2, double phi_1, double phi_2, bool eq = true) { //если rho_1 = rho_2 то true, иначе false
+complex <double> Kernel(double k, double rho_1, double rho_2, double phi_1, double phi_2, bool eq = true) { //РµСЃР»Рё rho_1 = rho_2 С‚Рѕ true, РёРЅР°С‡Рµ false
     complex <double> ed(0, 1.0);
     double l;
     if (eq)
@@ -57,6 +57,12 @@ complex <double> difffallWave(double k, double rho, double phi) {
     return 5.0 * tmp * exp(tmp * rho);
 }
 
+complex <double> timeFunc(double t) {
+    complex <double> ed(0, 1.0);
+    double omega = K0 * 3 * pow(10, 8);
+    return exp(ed * omega * t);
+}
+
 void CreateMatrixMemory(int I, int J, complex <double>**& A)
 {
     int i1, i2;
@@ -69,7 +75,7 @@ void CreateMatrixMemory(int I, int J, complex <double>**& A)
     }
 }
 
-//Освобождает память (количество строк)
+//РћСЃРІРѕР±РѕР¶РґР°РµС‚ РїР°РјСЏС‚СЊ (РєРѕР»РёС‡РµСЃС‚РІРѕ СЃС‚СЂРѕРє)
 void DeleteMatrixMemory(int I, complex <double>** A)
 {
     int i1;
@@ -96,16 +102,16 @@ void Gauss(complex <double>** Matrix, complex <double>* Vec, int Nm) {
     for (int k = 0; k < Nm; k++) {
         if (Matrix[k][k] != ed) {
             complex <double> T = Matrix[k][k];
-            for (int j = k; j < Nm; j++) {//нормирование строки
+            for (int j = k; j < Nm; j++) {//РЅРѕСЂРјРёСЂРѕРІР°РЅРёРµ СЃС‚СЂРѕРєРё
                 Matrix[k][j] = Matrix[k][j] / T;
             }
             Vec[k] = Vec[k] / T;
         }
-        for (int i = 0; i < Nm; i++) { //проходим по столбцу
+        for (int i = 0; i < Nm; i++) { //РїСЂРѕС…РѕРґРёРј РїРѕ СЃС‚РѕР»Р±С†Сѓ
             if ((Matrix[i][k] != nul) & (i != k)) {
                 complex <double> T = Matrix[i][k];
                 Matrix[i][k] = 0;
-                for (int j = k + 1; j < Nm; j++) { //проходим по двум строкам и вычитаем их
+                for (int j = k + 1; j < Nm; j++) { //РїСЂРѕС…РѕРґРёРј РїРѕ РґРІСѓРј СЃС‚СЂРѕРєР°Рј Рё РІС‹С‡РёС‚Р°РµРј РёС…
                     Matrix[i][j] -= Matrix[k][j] * T;
                 }
                 Vec[i] -= Vec[k] * T;
@@ -114,12 +120,12 @@ void Gauss(complex <double>** Matrix, complex <double>* Vec, int Nm) {
     }
 }
 
-void GenerateVTK(vector<vector<double>> data) {
+void GenerateVTK(vector<vector<double>> data, string name_file = "out.vtk", double time = -1.0) {
 
     int points = data.size();
     cout << "Points " << points << endl;
 
-    ofstream file2("out.vtk");
+    ofstream file2(name_file);
     file2 << "# vtk DataFile Version 2.0\n" <<
         "Cube example\n" <<
         "ASCII\n" <<
@@ -132,7 +138,7 @@ void GenerateVTK(vector<vector<double>> data) {
     }
     int side = sqrt(points);
     int CountOfPolygons = pow(side - 1, 2);
-    file2 << "POLYGONS " << CountOfPolygons << " " << CountOfPolygons * 5 << endl;//5 - количество координат на полигон 
+    file2 << "POLYGONS " << CountOfPolygons << " " << CountOfPolygons * 5 << endl;//5 - РєРѕР»РёС‡РµСЃС‚РІРѕ РєРѕРѕСЂРґРёРЅР°С‚ РЅР° РїРѕР»РёРіРѕРЅ 
 
     for (size_t i = 0; i < points - side - 1; i++)
     {
@@ -146,9 +152,36 @@ void GenerateVTK(vector<vector<double>> data) {
 
     for (size_t i = 0; i < points; i++)
     {
-        file2 << data[i][3] << endl;
+        if (time == -1)
+            file2 << data[i][3] << endl;
+        else
+            file2 << abs(complex<double>(data[i][4], data[i][5]) * timeFunc(time)) << endl;
     }
 
+    file2 <<
+        "SCALARS real float 1\n" <<
+        "LOOKUP_TABLE default" << endl;
+
+    for (size_t i = 0; i < points; i++)
+    {
+        if (time == -1)
+            file2 << data[i][4] << endl;
+        else
+            file2 << (complex<double>(data[i][4], data[i][5]) * timeFunc(time)).real() << endl;
+    }
+
+    file2 <<
+        "SCALARS imag float 1\n" <<
+        "LOOKUP_TABLE default" << endl;
+
+    for (size_t i = 0; i < points; i++)
+    {
+        if (time == -1)
+            file2 << data[i][5] << endl;
+        else
+            file2 << (complex<double>(data[i][4], data[i][5]) * timeFunc(time)).imag() << endl;
+    }
+    file2.close();
 }
 
 complex <double> Integr(double phi_beg, double phi_end, double koll, double K, double rho_1, double rho_2, bool eq = true) {
@@ -201,9 +234,7 @@ void ReadFile(const char Patch[], double* Vec, int N) {
     }
 }
 
-complex <double> timeFunc(double t) {
-    return 0;
-}
+
 
 double xyToPhi(double x, double y) {
     if (x == 0) {
@@ -233,10 +264,10 @@ int main() {
     complex<double>* beta_vec = new complex <double>[N];
 
     CreateMatrixMemory(N, N, Am);
-    for (size_t i = 0; i < n; i++)  //точки коллокации
+    for (size_t i = 0; i < n; i++)  //С‚РѕС‡РєРё РєРѕР»Р»РѕРєР°С†РёРё
     {
         double phi_koll = A + i * h + h / 2.0;
-        for (size_t j = 0; j < n; j++)  //координаты
+        for (size_t j = 0; j < n; j++)  //РєРѕРѕСЂРґРёРЅР°С‚С‹
         {
             double phi_beg = A + j * h;
             double phi_end = phi_beg + h;
@@ -250,7 +281,7 @@ int main() {
                 Am[i + n][j + n] = 0.0;
             }
 
-            Am[i][j] = Integr(phi_beg, phi_end, phi_koll, K0, R, R) * R;       //Якобиан (без него наверное даже лучше?)
+            Am[i][j] = Integr(phi_beg, phi_end, phi_koll, K0, R, R) * R;       //РЇРєРѕР±РёР°РЅ (Р±РµР· РЅРµРіРѕ РЅР°РІРµСЂРЅРѕРµ РґР°Р¶Рµ Р»СѓС‡С€Рµ?)
             Am[i][j + n] = -Integr(phi_beg, phi_end, phi_koll, K, R, R) * R;
             Am[i + n][j] += diffIntegr(phi_beg, phi_end, phi_koll, K0, R) * R;
             Am[i + n][j + n] -= diffIntegr(phi_beg, phi_end, phi_koll, K, R) * R;
@@ -304,7 +335,7 @@ int main() {
     //            complex<double> Intens(0, 0);
 
     //            if(new_rho<=R)
-    //                for (size_t j = 0; j < n; j++)  //координаты
+    //                for (size_t j = 0; j < n; j++)  //РєРѕРѕСЂРґРёРЅР°С‚С‹
     //                {
     //                    double phi_beg = A + j * h;
     //                    double phi_end = phi_beg + h;
@@ -313,7 +344,7 @@ int main() {
 
     //                }
     //            else
-    //                for (size_t j = 0; j < n; j++)  //координаты
+    //                for (size_t j = 0; j < n; j++)  //РєРѕРѕСЂРґРёРЅР°С‚С‹
     //                {
     //                    double phi_beg = A + j * h;
     //                    double phi_end = phi_beg + h;
@@ -328,7 +359,7 @@ int main() {
     
     ////////////////////////////
     //for (double new_rho = 5.1; new_rho < 20; new_rho += 0.1) {
-    //    for (size_t j = 0; j < n; j++)  //координаты
+    //    for (size_t j = 0; j < n; j++)  //РєРѕРѕСЂРґРёРЅР°С‚С‹
     //    {
     //        double phi_beg = A + j * h;
     //        double phi_end = phi_beg + h;
@@ -343,8 +374,8 @@ int main() {
 
     //ofstream file2 = GenerateVTK(n);
 
-    //for (double new_rho = 5.1; new_rho < 10; new_rho += 0.1) {    //самый удачный
-    //    for (size_t j = 0; j < n; j++)  //координаты
+    //for (double new_rho = 5.1; new_rho < 10; new_rho += 0.1) {    //СЃР°РјС‹Р№ СѓРґР°С‡РЅС‹Р№
+    //    for (size_t j = 0; j < n; j++)  //РєРѕРѕСЂРґРёРЅР°С‚С‹
     //    {
     //        
     //        double phi = A + j * h + h / 2.0;
@@ -363,10 +394,10 @@ int main() {
 
     
     vector <vector<double>> data;
-    double delta = 1.0;
-    double edge = 10;
+    double delta = 0.1;
+    double edge = 20;
     for (double x = -edge; x <= edge; x += delta) {
-        for (double y = -edge; y <= edge; y+= delta)  //координаты
+        for (double y = -edge; y <= edge; y+= delta)  //РєРѕРѕСЂРґРёРЅР°С‚С‹
         {
             if ((x < -0.01 || x>0.01) && (y < -0.01 || y>0.01)) {
                 
@@ -402,6 +433,14 @@ int main() {
     
     GenerateVTK(data);
 
-    
+    int count = data.size();
+    double time_one_oscl = 2 * Pi / 3 / pow(10, 8);
+    int i = 1;
+    for (double time = 0; time < 1*time_one_oscl; time+=time_one_oscl/10)
+    {
+        string name = "time" + to_string(i) + ".vtk";
+        GenerateVTK(data, name, time);
+        i++;
+    }
 	return 0;
 }
